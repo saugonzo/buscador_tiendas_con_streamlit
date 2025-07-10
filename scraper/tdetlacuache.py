@@ -2,24 +2,37 @@ import requests
 from bs4 import BeautifulSoup
 
 def buscar_tdetlacuache(juego, debug=False):
-    url = "https://tdetlacuache.com/search?q=" + juego.replace(" ", "+")
-    res = requests.get(url)
-    soup = BeautifulSoup(res.text, "html.parser")
+    try:
+        url_base = "https://tdetlacuache.com"
+        busqueda = juego.replace(" ", "+")
+        url_busqueda = f"https://tdetlacuache.com/search?q={busqueda}"
 
-    productos = soup.select(".grid-product__content")
-    for producto in productos:
-        titulo_tag = producto.select_one(".grid-product__title")
-        if titulo_tag and juego.lower() in titulo_tag.text.lower():
-            if "agotado" in producto.text.lower():
-                continue
-            precio = producto.select_one(".grid-product__price")
-            imagen_tag = producto.find_previous("img")
-            link_tag = producto.find_previous("a")
-            if precio and imagen_tag and link_tag:
-                return {
-                    "nombre": titulo_tag.text.strip(),
-                    "precio": precio.text.strip(),
-                    "url": "https://tdetlacuache.com" + link_tag["href"],
-                    "imagen": imagen_tag["src"] if imagen_tag["src"].startswith("http") else "https:" + imagen_tag["src"]
-                }
+        res = requests.get(url_busqueda, timeout=10)
+        if res.status_code != 200:
+            return None
+
+        soup = BeautifulSoup(res.text, "html.parser")
+
+        
+producto = soup.select_one("div.card__information")
+if not producto:
     return None
+nombre_producto = producto.select_one("a.full-unstyled-link").text
+if juego.lower() not in nombre_producto.lower():
+    return None
+precio = producto.select_one(".price__container").text
+url_producto = url_base + producto.select_one("a.full-unstyled-link")["href"]
+imagen = url_base + producto.find_previous("img")["src"]
+disponible = True if "$" in precio else False
+
+
+        return {
+            "precio": precio.strip(),
+            "url": url_producto,
+            "imagen": imagen
+        } if disponible else None
+
+    except Exception as e:
+        if debug:
+            print(f"Error en buscar_tdetlacuache: {e}")
+        return None
