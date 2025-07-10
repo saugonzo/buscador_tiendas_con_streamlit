@@ -68,7 +68,7 @@ if st.button("Buscar"):
     for idx, row in df.iterrows():
         cols = st.columns([1, 2, 2])
         if row["Imagen"]:
-            cols[0].image(row["Imagen"], use_column_width=True)
+            cols[0].image(row["Imagen"], use_container_width=True)
         else:
             cols[0].write("Sin imagen")
 
