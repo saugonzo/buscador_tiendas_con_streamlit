@@ -1,48 +1,51 @@
-
 import requests
 from bs4 import BeautifulSoup
 
-def buscar_tdetlacuache(juego, debug=False):
+def buscar_tdetlacuache(juego_buscado):
+    url = f"https://tdetlacuache.com/search?q={juego_buscado.replace(' ', '+')}"
+    headers = {
+        "User-Agent": "Mozilla/5.0"
+    }
+
     try:
-        url_base = "https://tdetlacuache.com"
-        busqueda = juego.replace(" ", "+")
-        url_busqueda = f"https://tdetlacuache.com/search?q={busqueda}"
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, "html.parser")
 
-        res = requests.get(url_busqueda, timeout=10)
-        if res.status_code != 200:
-            return None
+        productos = soup.select("div.card__information")
 
-        soup = BeautifulSoup(res.text, "html.parser")
-        producto = soup.select_one("div.card__information")
-        if not producto:
-            return None
+        for producto in productos:
+            nombre_tag = producto.select_one("h3.card__heading a")
+            if not nombre_tag:
+                continue
 
-        nombre_producto = producto.select_one("a.full-unstyled-link").text.strip().lower()
-        if juego.lower() not in nombre_producto:
-            return None
+            nombre = nombre_tag.get_text(strip=True)
+            if juego_buscado.lower() not in nombre.lower():
+                continue
 
-        precio_tag = producto.select_one("span.price-item.price-item--sale, span.price-item.price-item--regular")
-        if not precio_tag:
-            return None
-        precio = precio_tag.text.strip().replace("$", "").replace("MXN", "").strip()
+            precio_tag = producto.select_one(".price-item--last")
+            if not precio_tag:
+                continue  # No tiene precio o está agotado
 
-        agotado = producto.select_one("div.card-information .caption-with-letter-spacing")
-        if agotado and "agotado" in agotado.text.lower():
-            return None
+            precio = precio_tag.get_text(strip=True)
 
-        link_rel = producto.select_one("a.full-unstyled-link")["href"]
-        link = url_base + link_rel
+            url_producto = nombre_tag["href"]
+            if not url_producto.startswith("http"):
+                url_producto = "https://tdetlacuache.com" + url_producto
 
-        imagen_tag = producto.find_previous("img")
-        imagen = "https:" + imagen_tag["src"] if imagen_tag and imagen_tag.get("src") else None
+            imagen_tag = producto.find_previous("img")
+            imagen = imagen_tag["src"] if imagen_tag and "src" in imagen_tag.attrs else None
+            if imagen and imagen.startswith("//"):
+                imagen = "https:" + imagen
 
-        return {
-            "precio": precio,
-            "url": link,
-            "imagen": imagen
-        }
+            return {
+                "nombre": nombre,
+                "precio": precio,
+                "url": url_producto,
+                "imagen": imagen
+            }
 
     except Exception as e:
-        if debug:
-            print("Error en tdetlacuache:", e)
-        return None
+        return {"error": str(e)}
+
+    return None
