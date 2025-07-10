@@ -4,6 +4,7 @@ import os
 import pandas as pd
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 from scraper.alfaydelta import buscar_alfaydelta
 from scraper.canteraludica import buscar_canteraludica
 from scraper.yegogames import buscar_yegogames
@@ -14,11 +15,11 @@ from scraper.eurojuegos import buscar_eurojuegos
 from scraper.lacasadelaeducadora import buscar_lacasadelaeducadora
 from scraper.juegodebelugas import buscar_juegodebelugas
 
-st.set_page_config(page_title="Buscador de Juegos de Mesa", layout="centered")
-st.title("🔍 Buscador de Juegos de Mesa en Tiendas Mexicanas")
+st.set_page_config(page_title="Buscador de Juegos de Mesa", layout="wide")
+st.title("🎲 Buscador de Juegos de Mesa en Tiendas Mexicanas")
 
-juego = st.text_input("Escribe el nombre del juego:", "")
-modo_diagnostico = st.checkbox("🔍 Mostrar todos los productos encontrados (modo diagnóstico)", value=False)
+juego = st.text_input("🔍 Escribe el nombre del juego:")
+modo_diagnostico = st.checkbox("Mostrar todos los productos encontrados (modo diagnóstico)", value=False)
 
 if st.button("Buscar"):
     st.info(f"Buscando '{juego}' en tiendas disponibles...")
@@ -36,36 +37,45 @@ if st.button("Buscar"):
     ]
 
     resultados = []
-    descartes = []
 
     for nombre, funcion in tiendas:
         try:
-            info = funcion(juego, debug=modo_diagnostico)
-            if info:
-                resultados.append({
-                    "Tienda": nombre,
-                    "Precio": f"${info['precio']}",
-                    "Link": info['url'],
-                    "Imagen": info.get('imagen', '')
-                })
-            else:
+            productos = funcion(juego)
+            if not productos:
                 resultados.append({
                     "Tienda": nombre,
                     "Precio": "No disponible",
-                    "Link": "-",
-                    "Imagen": ""
+                    "Imagen": "",
+                    "Link": "-"
                 })
+                continue
+
+            for prod in productos:
+                if not modo_diagnostico and prod.get("agotado", False):
+                    continue
+                resultados.append({
+                    "Tienda": nombre,
+                    "Precio": f"${prod['precio']}",
+                    "Imagen": prod.get("imagen", ""),
+                    "Link": f"[Abrir página]({prod['url']})"
+                })
+
         except Exception as e:
             resultados.append({
                 "Tienda": nombre,
-                "Precio": f"Error: {str(e)}",
-                "Link": "-",
-                "Imagen": ""
+                "Precio": f"❌ Error: {str(e)}",
+                "Imagen": "",
+                "Link": "-"
             })
 
-    df = pd.DataFrame(resultados)
-    st.dataframe(df, use_container_width=True)
-
-    if modo_diagnostico and descartes:
-        st.subheader("🛠 Productos descartados")
-        st.dataframe(pd.DataFrame(descartes), use_container_width=True)
+    if resultados:
+        df = pd.DataFrame(resultados)
+        for idx, row in df.iterrows():
+            cols = st.columns([1, 2, 4])
+            if row["Imagen"]:
+                cols[0].image(row["Imagen"], width=100)
+            cols[1].markdown(f"**{row['Tienda']}**")
+            cols[2].markdown(f"{row['Precio']}  
+{row['Link']}")
+    else:
+        st.warning("No se encontraron resultados.")
