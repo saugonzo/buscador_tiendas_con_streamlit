@@ -1,47 +1,40 @@
 import requests
 from bs4 import BeautifulSoup
 
-def buscar_geekystuff(juego_buscado):
-    url = f"https://www.geekystuff.mx/search?type=product&q={juego_buscado.replace(' ', '+')}"
-    headers = {"User-Agent": "Mozilla/5.0"}
-
+def buscar_geekystuff(nombre_juego):
     try:
-        response = requests.get(url, headers=headers, timeout=10)
+        url = f"https://geekystuff.com.mx/search?q={nombre_juego}"
+        response = requests.get(url, timeout=10)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, "html.parser")
 
-        productos = soup.select(".search_res_item_snippet")
+        productos = soup.select(".product-grid-item")
 
         for producto in productos:
-            nombre_tag = producto.select_one(".search_res_item_title a")
-            if not nombre_tag:
-                continue
+            titulo_tag = producto.select_one(".card__heading a")
+            titulo = titulo_tag.get_text(strip=True) if titulo_tag else ""
 
-            nombre = nombre_tag.get_text(strip=True)
-            if juego_buscado.lower() not in nombre.lower():
-                continue
+            if nombre_juego.lower() in titulo.lower():
+                disponible = "Agotado" not in producto.text and "agotado" not in producto.text.lower()
+                if not disponible:
+                    continue
 
-            precio_tag = producto.select_one(".isp_product_price")
-            if not precio_tag:
-                continue
+                link = "https://geekystuff.com.mx" + titulo_tag.get("href")
 
-            precio = precio_tag.get_text(strip=True)
+                precio_tag = producto.select_one(".price__sale .price-item--sale") or \
+                             producto.select_one(".price__regular .price-item--regular")
+                precio = precio_tag.get_text(strip=True).replace("\n", "") if precio_tag else "Precio no encontrado"
 
-            url_producto = nombre_tag["href"]
-            if not url_producto.startswith("http"):
-                url_producto = "https://www.geekystuff.mx" + url_producto
+                imagen_tag = producto.select_one("img")
+                imagen = "https:" + imagen_tag.get("src") if imagen_tag and imagen_tag.get("src") else ""
 
-            imagen_tag = producto.select_one("img.search_res_img")
-            imagen = imagen_tag["src"] if imagen_tag else None
+                return {
+                    "titulo": titulo,
+                    "precio": precio,
+                    "url": link,
+                    "imagen": imagen
+                }
 
-            return {
-                "nombre": nombre,
-                "precio": precio,
-                "url": url_producto,
-                "imagen": imagen
-            }
-
+        return None
     except Exception as e:
         return {"error": str(e)}
-
-    return None
