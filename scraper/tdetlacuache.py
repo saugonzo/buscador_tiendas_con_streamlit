@@ -1,3 +1,4 @@
+
 import requests
 from bs4 import BeautifulSoup
 
@@ -12,27 +13,36 @@ def buscar_tdetlacuache(juego, debug=False):
             return None
 
         soup = BeautifulSoup(res.text, "html.parser")
+        producto = soup.select_one("div.card__information")
+        if not producto:
+            return None
 
-        
-producto = soup.select_one("div.card__information")
-if not producto:
-    return None
-nombre_producto = producto.select_one("a.full-unstyled-link").text
-if juego.lower() not in nombre_producto.lower():
-    return None
-precio = producto.select_one(".price__container").text
-url_producto = url_base + producto.select_one("a.full-unstyled-link")["href"]
-imagen = url_base + producto.find_previous("img")["src"]
-disponible = True if "$" in precio else False
+        nombre_producto = producto.select_one("a.full-unstyled-link").text.strip().lower()
+        if juego.lower() not in nombre_producto:
+            return None
 
+        precio_tag = producto.select_one("span.price-item.price-item--sale, span.price-item.price-item--regular")
+        if not precio_tag:
+            return None
+        precio = precio_tag.text.strip().replace("$", "").replace("MXN", "").strip()
+
+        agotado = producto.select_one("div.card-information .caption-with-letter-spacing")
+        if agotado and "agotado" in agotado.text.lower():
+            return None
+
+        link_rel = producto.select_one("a.full-unstyled-link")["href"]
+        link = url_base + link_rel
+
+        imagen_tag = producto.find_previous("img")
+        imagen = "https:" + imagen_tag["src"] if imagen_tag and imagen_tag.get("src") else None
 
         return {
-            "precio": precio.strip(),
-            "url": url_producto,
+            "precio": precio,
+            "url": link,
             "imagen": imagen
-        } if disponible else None
+        }
 
     except Exception as e:
         if debug:
-            print(f"Error en buscar_tdetlacuache: {e}")
+            print("Error en tdetlacuache:", e)
         return None
