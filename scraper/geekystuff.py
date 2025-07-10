@@ -3,30 +3,32 @@ from bs4 import BeautifulSoup
 
 def buscar_geekystuff(nombre_juego):
     try:
-        url = f"https://geekystuff.mx/search?q={nombre_juego}"
+        url = f"https://www.geekystuff.mx/search?query={nombre_juego}"
         response = requests.get(url, timeout=10)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, "html.parser")
 
-        productos = soup.select(".product-grid-item")
+        productos = soup.select("a.sc-hKgILt")  # enlaces a productos
 
         for producto in productos:
-            titulo_tag = producto.select_one(".card__heading a")
-            titulo = titulo_tag.get_text(strip=True) if titulo_tag else ""
-
+            titulo = producto.get_text(strip=True)
             if nombre_juego.lower() in titulo.lower():
-                disponible = "Agotado" not in producto.text and "agotado" not in producto.text.lower()
-                if not disponible:
-                    continue
+                link = "https://www.geekystuff.mx" + producto.get("href", "")
+                
+                # Ahora entramos al enlace del producto para obtener precio y disponibilidad
+                prod_resp = requests.get(link, timeout=10)
+                prod_resp.raise_for_status()
+                prod_soup = BeautifulSoup(prod_resp.text, "html.parser")
 
-                link = "https://geekystuff.com.mx" + titulo_tag.get("href")
+                agotado = prod_soup.find(string=lambda t: "agotado" in t.lower()) is not None
+                if agotado:
+                    continue  # lo saltamos si está agotado
 
-                precio_tag = producto.select_one(".price__sale .price-item--sale") or \
-                             producto.select_one(".price__regular .price-item--regular")
-                precio = precio_tag.get_text(strip=True).replace("\n", "") if precio_tag else "Precio no encontrado"
+                precio_tag = prod_soup.select_one(".sc-bcXHqe span")
+                precio = precio_tag.get_text(strip=True) if precio_tag else "Precio no encontrado"
 
-                imagen_tag = producto.select_one("img")
-                imagen = "https:" + imagen_tag.get("src") if imagen_tag and imagen_tag.get("src") else ""
+                img_tag = prod_soup.select_one("img.sc-eDLJxc")
+                imagen = img_tag.get("src") if img_tag else ""
 
                 return {
                     "titulo": titulo,
