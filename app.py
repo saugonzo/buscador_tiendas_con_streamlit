@@ -35,9 +35,10 @@ if st.button("Buscar") and juego.strip():
     ]
 
     resultados = []
+descartes = []
     for nombre, funcion in tiendas:
         try:
-            info = funcion(juego)
+            info = funcion(juego, debug=modo_diagnostico)
             if isinstance(info, dict) and info.get("precio") and info.get("url") and not info.get("agotado", False):
                 resultados.append({
                     "Tienda": nombre,
