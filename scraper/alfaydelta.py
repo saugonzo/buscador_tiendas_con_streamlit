@@ -1,38 +1,43 @@
 import requests
 from bs4 import BeautifulSoup
+import unidecode
 
-def buscar_alfaydelta(juego, debug=False):
+def buscar_alfaydelta(juego):
+    url_base = "https://alfaydelta.com"
+    busqueda = juego.replace(" ", "+")
+    url = f"https://alfaydelta.com/search?q=" + busqueda
+    headers = {
+        "User-Agent": "Mozilla/5.0"
+    }
+
+    def match(text):
+        if not text:
+            return False
+        normal = unidecode.unidecode(text.lower())
+        return all(p in normal for p in unidecode.unidecode(juego.lower()).split())
+
     try:
-        url_base = "https://alfaydelta.com"
-        busqueda = juego.replace(" ", "+")
-        url_busqueda = f"https://alfaydelta.com/search?q={busqueda}"
-
-        res = requests.get(url_busqueda, timeout=10)
-        if res.status_code != 200:
-            return None
-
-        soup = BeautifulSoup(res.text, "html.parser")
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, "html.parser")
 
         
-producto = soup.select_one("div.card__information")
-if not producto:
-    return None
-nombre_producto = producto.select_one("a.full-unstyled-link").text
-if juego.lower() not in nombre_producto.lower():
-    return None
-precio = producto.select_one(".price__container").text
-url_producto = url_base + producto.select_one("a.full-unstyled-link")["href"]
-imagen = url_base + producto.find_previous("img")["src"]
-disponible = True if "$" in precio else False
-
-
-        return {
-            "precio": precio.strip(),
-            "url": url_producto,
-            "imagen": imagen
-        } if disponible else None
+        productos = soup.select("div.product-item")
+        for producto in productos:
+            titulo_tag = producto.select_one("span.product-item__title")
+            precio_tag = producto.select_one("span.product__price--original")
+            link_tag = producto.find("a", href=True)
+            img_tag = producto.select_one("img")
+            disponibilidad = producto.text.lower()
+            if titulo_tag and match(titulo_tag.text) and "agotado" not in disponibilidad:
+                return {
+                    "nombre": titulo_tag.text.strip(),
+                    "precio": precio_tag.text.strip() if precio_tag else "N/A",
+                    "url": url_base + link_tag["href"],
+                    "imagen": "https:" + img_tag["src"] if img_tag else None
+                }
+        return None
+        
 
     except Exception as e:
-        if debug:
-            print(f"Error en buscar_alfaydelta: {e}")
         return None
