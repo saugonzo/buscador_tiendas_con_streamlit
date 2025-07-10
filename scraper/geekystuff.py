@@ -3,16 +3,14 @@ from bs4 import BeautifulSoup
 
 def buscar_geekystuff(juego_buscado):
     url = f"https://www.geekystuff.mx/search?type=product&q={juego_buscado.replace(' ', '+')}"
-    headers = {
-        "User-Agent": "Mozilla/5.0"
-    }
+    headers = {"User-Agent": "Mozilla/5.0"}
 
     try:
         response = requests.get(url, headers=headers, timeout=10)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, "html.parser")
 
-        productos = soup.select("div.search_res_item_snippet")
+        productos = soup.select(".search_res_item_snippet")
 
         for producto in productos:
             nombre_tag = producto.select_one(".search_res_item_title a")
@@ -23,20 +21,18 @@ def buscar_geekystuff(juego_buscado):
             if juego_buscado.lower() not in nombre.lower():
                 continue
 
-            # Verifica si el producto está marcado como agotado
-            agotado = "agotado" in producto.get_text(strip=True).lower()
-            if agotado:
+            precio_tag = producto.select_one(".isp_product_price")
+            if not precio_tag:
                 continue
+
+            precio = precio_tag.get_text(strip=True)
 
             url_producto = nombre_tag["href"]
             if not url_producto.startswith("http"):
                 url_producto = "https://www.geekystuff.mx" + url_producto
 
-            precio_tag = producto.select_one(".isp_product_price")
-            precio = precio_tag.get_text(strip=True).replace("MXN", "$").replace("\xa0", " ") if precio_tag else "Precio no disponible"
-
-            imagen_tag = producto.select_one("img")
-            imagen = imagen_tag["src"] if imagen_tag and "src" in imagen_tag.attrs else None
+            imagen_tag = producto.select_one("img.search_res_img")
+            imagen = imagen_tag["src"] if imagen_tag else None
 
             return {
                 "nombre": nombre,
