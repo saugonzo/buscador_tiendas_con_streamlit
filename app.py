@@ -1,17 +1,9 @@
-
 import streamlit as st
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from scraper.alfaydelta import buscar_alfaydelta
 from scraper.canteraludica import buscar_canteraludica
-from scraper.yegogames import buscar_yegogames
-from scraper.geekystuff import buscar_geekystuff
-from scraper.elduende import buscar_elduende
-from scraper.tdetlacuache import buscar_tdetlacuache
-from scraper.eurojuegos import buscar_eurojuegos
-from scraper.lacasadelaeducadora import buscar_lacasadelaeducadora
-from scraper.juegodebelugas import buscar_juegodebelugas
 import pandas as pd
 
 st.set_page_config(page_title="Buscador de Juegos de Mesa", layout="centered")
@@ -25,13 +17,6 @@ if st.button("Buscar"):
     tiendas = [
         ("Alfa y Delta", buscar_alfaydelta),
         ("Cantera Lúdica", buscar_canteraludica),
-        ("Yego Games", buscar_yegogames),
-        ("Geeky Stuff", buscar_geekystuff),
-        ("El Duende", buscar_elduende),
-        ("T de Tlacuache", buscar_tdetlacuache),
-        ("Eurojuegos", buscar_eurojuegos),
-        ("La Casa de la Educadora", buscar_lacasadelaeducadora),
-        ("Juegos de Belugas", buscar_juegodebelugas),
     ]
 
     resultados = []
