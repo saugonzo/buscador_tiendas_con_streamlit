@@ -1,76 +1,69 @@
+
 import streamlit as st
 import sys
 import os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from scraper.alfaydelta import buscar_alfaydelta
+from scraper.canteraludica import buscar_canteraludica
+from scraper.yegogames import buscar_yegogames
+from scraper.geekystuff import buscar_geekystuff
+from scraper.elduende import buscar_elduende
+from scraper.tdetlacuache import buscar_tdetlacuache
+from scraper.eurojuegos import buscar_eurojuegos
+from scraper.lacasadelaeducadora import buscar_lacasadelaeducadora
+from scraper.juegodebelugas import buscar_juegodebelugas
 import pandas as pd
 
-sys.path.append(os.path.join(os.path.dirname(__file__), "scraper"))
-from alfaydelta import buscar_alfaydelta
-from canteraludica import buscar_canteraludica
-from yegogames import buscar_yegogames
-from geekystuff import buscar_geekystuff
-from elduende import buscar_elduende
-from tdetlacuache import buscar_tdetlacuache
-from eurojuegos import buscar_eurojuegos
-from lacasadelaeducadora import buscar_lacasadelaeducadora
-from juegodebelugas import buscar_juegodebelugas
+st.set_page_config(page_title="Buscador de Juegos de Mesa", layout="centered")
+st.title("🔍 Buscador de Juegos de Mesa en Tiendas Mexicanas")
 
-st.set_page_config(page_title="Buscador de Juegos de Mesa", layout="wide")
-st.title("🎲 Buscador de Juegos de Mesa en Tiendas Mexicanas")
+juego = st.text_input("Escribe el nombre del juego:")
 
-juego = st.text_input("Escribe el nombre del juego:", "")
-
-if st.button("Buscar"):
-    st.info(f"Buscando '{juego}' en tiendas...")
+if st.button("Buscar") and juego.strip():
+    st.info(f"Buscando '{juego}' en tiendas disponibles...")
 
     tiendas = [
-        ("Alfaydelta", buscar_alfaydelta),
-        ("Canteraludica", buscar_canteraludica),
-        ("Yegogames", buscar_yegogames),
-        ("Geekystuff", buscar_geekystuff),
-        ("Elduende", buscar_elduende),
-        ("Tdetlacuache", buscar_tdetlacuache),
+        ("Alfa y Delta", buscar_alfaydelta),
+        ("Cantera Lúdica", buscar_canteraludica),
+        ("Yego Games", buscar_yegogames),
+        ("Geeky Stuff", buscar_geekystuff),
+        ("El Duende", buscar_elduende),
+        ("T de Tlacuache", buscar_tdetlacuache),
         ("Eurojuegos", buscar_eurojuegos),
-        ("Lacasadelaeducadora", buscar_lacasadelaeducadora),
-        ("Juegodebelugas", buscar_juegodebelugas)
+        ("La Casa de la Educadora", buscar_lacasadelaeducadora),
+        ("Juegos de Belugas", buscar_juegodebelugas),
     ]
 
     resultados = []
-
     for nombre, funcion in tiendas:
         try:
             info = funcion(juego)
-            if info:
+            if isinstance(info, dict) and info.get("precio") and info.get("url") and not info.get("agotado", False):
                 resultados.append({
                     "Tienda": nombre,
-                    "Precio": info['precio'],
-                    "Link": f"[Abrir tienda]({info['url']})",
-                    "Imagen": f"![]({info['imagen']})"
-                })
-            else:
-                resultados.append({
-                    "Tienda": nombre,
-                    "Precio": "No disponible",
-                    "Link": "-",
-                    "Imagen": "-"
+                    "Precio": f"${info['precio']}",
+                    "Link": f"[Ver producto]({info['url']})",
+                    "Imagen": info.get("imagen", "")
                 })
         except Exception as e:
             resultados.append({
                 "Tienda": nombre,
                 "Precio": f"Error: {str(e)}",
                 "Link": "-",
-                "Imagen": "-"
+                "Imagen": ""
             })
 
-<<<<<<< HEAD
-    df = pd.DataFrame(resultados)
-    st.write("### Resultados de búsqueda")
-    st.write(df.to_html(escape=False), unsafe_allow_html=True)
-=======
-    st.markdown("### Resultados")
-for r in resultados:
-    if r["Link"] != "-":
-        st.markdown(f"- **{r['Tienda']}**: {r['Precio']} – [Ver juego]({r['Link']})", unsafe_allow_html=True)
+    if resultados:
+        df = pd.DataFrame(resultados)
+        for _, row in df.iterrows():
+            st.markdown(f"### 🛒 {row['Tienda']}")
+            col1, col2 = st.columns([1, 3])
+            with col1:
+                if row["Imagen"]:
+                    st.image(row["Imagen"], width=120)
+            with col2:
+                st.markdown(f"**Precio:** {row['Precio']}")
+                st.markdown(f"{row['Link']}")
+            st.markdown("---")
     else:
-        st.markdown(f"- **{r['Tienda']}**: {r['Precio']}")
-
->>>>>>> 18a451ebe720c484ddcb3bc9ff54b853133278cd
+        st.warning("No se encontraron productos disponibles.")
