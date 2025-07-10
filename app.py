@@ -75,7 +75,7 @@ if st.button("Buscar"):
             if row["Imagen"]:
                 cols[0].image(row["Imagen"], width=100)
             cols[1].markdown(f"**{row['Tienda']}**")
-            cols[2].markdown(f"{row['Precio']}")  
-{row['Link']}")
+            cols[2].markdown(f"[{row['Precio']}](  
+{row['Link']})")
     else:
         st.warning("No se encontraron resultados.")
