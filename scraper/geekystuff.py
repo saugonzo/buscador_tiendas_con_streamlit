@@ -1,43 +1,51 @@
 import requests
 from bs4 import BeautifulSoup
-import unidecode
 
-def buscar_geekystuff(juego):
-    url_base = "https://www.geekystuff.mx"
-    busqueda = juego.replace(" ", "+")
-    url = f"https://www.geekystuff.mx/search?query=" + busqueda
+def buscar_geekystuff(juego_buscado):
+    url = f"https://www.geekystuff.mx/search?type=product&q={juego_buscado.replace(' ', '+')}"
     headers = {
         "User-Agent": "Mozilla/5.0"
     }
-
-    def match(text):
-        if not text:
-            return False
-        normal = unidecode.unidecode(text.lower())
-        return all(p in normal for p in unidecode.unidecode(juego.lower()).split())
 
     try:
         response = requests.get(url, headers=headers, timeout=10)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, "html.parser")
 
-        
         productos = soup.select("div.search_res_item_snippet")
+
         for producto in productos:
-            titulo_tag = producto.select_one("div.search_res_item_title")
-            precio_tag = producto.select_one("div.isp_product_price")
-            link_tag = producto.select_one("a[href]")
-            img_tag = producto.select_one("img")
-            disponibilidad = producto.text.lower()
-            if titulo_tag and match(titulo_tag.text) and "agotado" not in disponibilidad:
-                return {
-                    "nombre": titulo_tag.text.strip(),
-                    "precio": precio_tag.text.strip() if precio_tag else "N/A",
-                    "url": link_tag["href"] if link_tag else None,
-                    "imagen": img_tag["src"] if img_tag else None
-                }
-        return None
-        
+            nombre_tag = producto.select_one(".search_res_item_title a")
+            if not nombre_tag:
+                continue
+
+            nombre = nombre_tag.get_text(strip=True)
+            if juego_buscado.lower() not in nombre.lower():
+                continue
+
+            # Verifica si el producto está marcado como agotado
+            agotado = "agotado" in producto.get_text(strip=True).lower()
+            if agotado:
+                continue
+
+            url_producto = nombre_tag["href"]
+            if not url_producto.startswith("http"):
+                url_producto = "https://www.geekystuff.mx" + url_producto
+
+            precio_tag = producto.select_one(".isp_product_price")
+            precio = precio_tag.get_text(strip=True).replace("MXN", "$").replace("\xa0", " ") if precio_tag else "Precio no disponible"
+
+            imagen_tag = producto.select_one("img")
+            imagen = imagen_tag["src"] if imagen_tag and "src" in imagen_tag.attrs else None
+
+            return {
+                "nombre": nombre,
+                "precio": precio,
+                "url": url_producto,
+                "imagen": imagen
+            }
 
     except Exception as e:
-        return None
+        return {"error": str(e)}
+
+    return None
