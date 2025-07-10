@@ -3,7 +3,7 @@ from bs4 import BeautifulSoup
 
 def buscar_geekystuff(nombre_juego):
     try:
-        url = f"https://geekystuff.com.mx/search?q={nombre_juego}"
+        url = f"https://geekystuff.mx/search?q={nombre_juego}"
         response = requests.get(url, timeout=10)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, "html.parser")
