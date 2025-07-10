@@ -1,43 +1,47 @@
 import requests
 from bs4 import BeautifulSoup
-import unidecode
 
-def buscar_yegogames(juego):
-    url_base = "https://yegogames.com"
-    busqueda = juego.replace(" ", "+")
-    url = f"https://yegogames.com/search?q=" + busqueda
+def buscar_yegogames(juego_buscado):
+    url_busqueda = f"https://yegogames.com/search?q={juego_buscado.replace(' ', '+')}"
     headers = {
         "User-Agent": "Mozilla/5.0"
     }
 
-    def match(text):
-        if not text:
-            return False
-        normal = unidecode.unidecode(text.lower())
-        return all(p in normal for p in unidecode.unidecode(juego.lower()).split())
-
     try:
-        response = requests.get(url, headers=headers, timeout=10)
+        response = requests.get(url_busqueda, headers=headers, timeout=10)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, "html.parser")
 
-        
         productos = soup.select("div.card__information")
-        for producto in productos:
-            titulo_tag = producto.select_one("h3.card__heading")
-            precio_tag = producto.select_one("span.price-item--last")
-            link_tag = producto.find("a", href=True)
-            img_tag = producto.find_previous("img")
-            disponibilidad = producto.text.lower()
-            if titulo_tag and match(titulo_tag.text) and "agotado" not in disponibilidad:
-                return {
-                    "nombre": titulo_tag.text.strip(),
-                    "precio": precio_tag.text.strip() if precio_tag else "N/A",
-                    "url": base_url + link_tag["href"],
-                    "imagen": img_tag["src"] if img_tag else None
-                }
-        return None
-        
+        contenedores = soup.select("li.grid__item")
+
+        for producto, contenedor in zip(productos, contenedores):
+            nombre_tag = producto.select_one("a.full-unstyled-link")
+            nombre = nombre_tag.get_text(strip=True) if nombre_tag else ""
+            if juego_buscado.lower() not in nombre.lower():
+                continue
+
+            # Verifica si está agotado
+            agotado = contenedor.find(string=lambda s: "agotado" in s.lower()) is not None
+            if agotado:
+                continue
+
+            precio_tag = producto.select_one(".price-item--last")
+            precio = precio_tag.get_text(strip=True).replace("\xa0", " ") if precio_tag else "Precio no disponible"
+
+            url_producto = "https://yegogames.com" + nombre_tag["href"]
+
+            imagen_tag = contenedor.select_one("img")
+            imagen = "https:" + imagen_tag["src"] if imagen_tag and imagen_tag.get("src", "").startswith("//") else imagen_tag["src"]
+
+            return {
+                "nombre": nombre,
+                "precio": precio,
+                "url": url_producto,
+                "imagen": imagen
+            }
 
     except Exception as e:
-        return None
+        return {"error": str(e)}
+
+    return None
