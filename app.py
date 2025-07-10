@@ -47,7 +47,6 @@ if st.button("Buscar"):
                 "Imagen": None
             })
 
-<<<<<<< HEAD
     for row in resultados:
         cols = st.columns([1, 2, 2])
         cols[0].image(row["Imagen"], use_column_width=True) if row["Imagen"] else cols[0].write("Sin imagen")
@@ -56,15 +55,3 @@ if st.button("Buscar"):
             cols[2].markdown(f"[{row['Precio']}]({row['Link']})")
         else:
             cols[2].write(row["Precio"])
-=======
-    if resultados:
-        df = pd.DataFrame(resultados)
-        for idx, row in df.iterrows():
-            cols = st.columns([1, 2, 4])
-            if row["Imagen"]:
-                cols[0].image(row["Imagen"], width=100)
-            cols[1].markdown(f"**{row['Tienda']}**")
-            cols[2].markdown(f"[{row['Precio']}]({row['Link']})")
-    else:
-        st.warning("No se encontraron resultados.")
->>>>>>> 49fb941f6d86036b013639e2a7cefceca6e2bb5c
