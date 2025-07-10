@@ -1,43 +1,40 @@
+# scraper/lacasadelaeducadora.py
+
 import requests
 from bs4 import BeautifulSoup
-import unidecode
 
-def buscar_lacasadelaeducadora(juego):
-    url_base = "https://lacasadelaeducadora.com"
-    busqueda = juego.replace(" ", "+")
-    url = f"https://lacasadelaeducadora.com/search?q=" + busqueda
+def buscar_lacasadelaeducadora(juego: str):
+    url_busqueda = f"https://www.lacasadelaeducadora.com/search?q={juego.replace(' ', '+')}"
     headers = {
         "User-Agent": "Mozilla/5.0"
     }
 
-    def match(text):
-        if not text:
-            return False
-        normal = unidecode.unidecode(text.lower())
-        return all(p in normal for p in unidecode.unidecode(juego.lower()).split())
-
     try:
-        response = requests.get(url, headers=headers, timeout=10)
+        response = requests.get(url_busqueda, headers=headers, timeout=10)
         response.raise_for_status()
-        soup = BeautifulSoup(response.text, "html.parser")
-
-        
-        productos = soup.select("div.product-item__info")
-        for producto in productos:
-            titulo_tag = producto.select_one("a.product-item-meta__title")
-            precio_tag = producto.select_one("div.price-list span.price")
-            link_tag = titulo_tag
-            img_tag = producto.find_previous("img")
-            disponibilidad = producto.text.lower()
-            if titulo_tag and match(titulo_tag.text) and "agotado" not in disponibilidad:
-                return {
-                    "nombre": titulo_tag.text.strip(),
-                    "precio": precio_tag.text.strip() if precio_tag else "N/A",
-                    "url": base_url + link_tag["href"],
-                    "imagen": "https:" + img_tag["src"] if img_tag else None
-                }
+    except Exception:
         return None
-        
 
-    except Exception as e:
-        return None
+    soup = BeautifulSoup(response.text, "html.parser")
+    productos = soup.select(".product-item")
+
+    for producto in productos:
+        titulo_elem = producto.select_one(".product-item-meta__title")
+        precio_elem = producto.select_one(".price-list .price")
+        agotado_elem = producto.select_one(".product-label--sold-out")
+        imagen_elem = producto.select_one("img")
+        link_elem = titulo_elem.get("href") if titulo_elem else None
+
+        if not titulo_elem or not precio_elem or agotado_elem:
+            continue
+
+        titulo = titulo_elem.get_text(strip=True)
+        if juego.lower() in titulo.lower():
+            return {
+                "titulo": titulo,
+                "precio": precio_elem.get_text(strip=True).replace("\xa0", " "),
+                "url": "https://www.lacasadelaeducadora.com" + link_elem if link_elem else "",
+                "imagen": "https:" + imagen_elem["src"] if imagen_elem and "src" in imagen_elem.attrs else ""
+            }
+
+    return None
