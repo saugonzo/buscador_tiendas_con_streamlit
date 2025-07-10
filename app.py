@@ -1,5 +1,8 @@
 
 import streamlit as st
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from scraper.alfaydelta import buscar_alfaydelta
 from scraper.canteraludica import buscar_canteraludica
 from scraper.yegogames import buscar_yegogames
