@@ -2,7 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 import unidecode
 
-def buscar_eurojuegos(juego):
+def buscar_eurojuegos(juego, debug=False):
     url_base = "https://www.eurojuegos.com.mx"
     busqueda = juego.replace(" ", "+")
     url = f"https://www.eurojuegos.com.mx/?s=" + busqueda

@@ -2,7 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 import unidecode
 
-def buscar_lacasadelaeducadora(juego):
+def buscar_lacasadelaeducadora(juego, debug=False):
     url_base = "https://lacasadelaeducadora.com"
     busqueda = juego.replace(" ", "+")
     url = f"https://lacasadelaeducadora.com/search?q=" + busqueda

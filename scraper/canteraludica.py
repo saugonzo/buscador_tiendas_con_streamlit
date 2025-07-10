@@ -2,7 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 import unidecode
 
-def buscar_canteraludica(juego):
+def buscar_canteraludica(juego, debug=False):
     url_base = "https://canteraludica.com"
     busqueda = juego.replace(" ", "+")
     url = f"https://canteraludica.com/search?q=" + busqueda

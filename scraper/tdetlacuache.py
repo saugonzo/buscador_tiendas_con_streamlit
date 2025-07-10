@@ -1,7 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 
-def buscar_tdetlacuache(juego):
+def buscar_tdetlacuache(juego, debug=False):
     url = "https://tdetlacuache.com/search?q=" + juego.replace(" ", "+")
     res = requests.get(url)
     soup = BeautifulSoup(res.text, "html.parser")

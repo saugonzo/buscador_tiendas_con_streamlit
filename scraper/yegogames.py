@@ -2,7 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 import unidecode
 
-def buscar_yegogames(juego):
+def buscar_yegogames(juego, debug=False):
     url_base = "https://yegogames.com"
     busqueda = juego.replace(" ", "+")
     url = f"https://yegogames.com/search?q=" + busqueda

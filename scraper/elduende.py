@@ -2,7 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 import unidecode
 
-def buscar_elduende(juego):
+def buscar_elduende(juego, debug=False):
     url_base = "https://www.elduende.com.mx"
     busqueda = juego.replace(" ", "+")
     url = f"https://www.elduende.com.mx/?s=" + busqueda
