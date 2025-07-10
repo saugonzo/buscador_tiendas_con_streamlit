@@ -1,43 +1,38 @@
 import requests
 from bs4 import BeautifulSoup
-import unidecode
 
 def buscar_eurojuegos(juego, debug=False):
     url_base = "https://www.eurojuegos.com.mx"
-    busqueda = juego.replace(" ", "+")
-    url = f"https://www.eurojuegos.com.mx/?s=" + busqueda
+    url_busqueda = f"https://www.eurojuegos.com.mx/?s={juego}&post_type=product"
     headers = {
         "User-Agent": "Mozilla/5.0"
     }
 
-    def match(text):
-        if not text:
-            return False
-        normal = unidecode.unidecode(text.lower())
-        return all(p in normal for p in unidecode.unidecode(juego.lower()).split())
-
     try:
-        response = requests.get(url, headers=headers, timeout=10)
-        response.raise_for_status()
-        soup = BeautifulSoup(response.text, "html.parser")
-
-        
-        productos = soup.select("li.product")
-        for producto in productos:
-            titulo_tag = producto.select_one("h2.woocommerce-loop-product__title")
-            precio_tag = producto.select_one("span.woocommerce-Price-amount")
-            link_tag = producto.select_one("a.woocommerce-LoopProduct-link")
-            img_tag = producto.select_one("img")
-            disponibilidad = producto.text.lower()
-            if titulo_tag and match(titulo_tag.text) and "agotado" not in disponibilidad:
-                return {
-                    "nombre": titulo_tag.text.strip(),
-                    "precio": precio_tag.text.strip() if precio_tag else "N/A",
-                    "url": link_tag["href"] if link_tag else None,
-                    "imagen": img_tag["src"] if img_tag else None
-                }
-        return None
-        
-
+        res = requests.get(url_busqueda, headers=headers, timeout=10)
+        res.raise_for_status()
     except Exception as e:
+        if debug:
+            print(f"Error accediendo a {url_busqueda}: {e}")
         return None
+
+    soup = BeautifulSoup(res.text, "html.parser")
+
+    
+    for producto in soup.select(".product"):
+        titulo_tag = producto.select_one(".woocommerce-loop-product__title")
+        if not titulo_tag or juego.lower() not in titulo_tag.text.lower():
+            continue
+        if producto.select_one(".out-of-stock"):
+            continue
+        enlace_tag = producto.select_one("a.woocommerce-LoopProduct-link")
+        precio_tag = producto.select_one(".price bdi")
+        imagen_tag = producto.select_one("img")
+        return {
+            "precio": precio_tag.text.strip() if precio_tag else "N/A",
+            "url": enlace_tag['href'] if enlace_tag else "-",
+            "imagen": imagen_tag['src'] if imagen_tag else ""
+        }
+        
+
+    return None

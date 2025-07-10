@@ -1,43 +1,38 @@
 import requests
 from bs4 import BeautifulSoup
-import unidecode
 
 def buscar_juegodebelugas(juego, debug=False):
     url_base = "https://juegodebelugas.com"
-    busqueda = juego.replace(" ", "+")
-    url = f"https://juegodebelugas.com/search?q=" + busqueda
+    url_busqueda = f"https://juegodebelugas.com/search?q={juego}"
     headers = {
         "User-Agent": "Mozilla/5.0"
     }
 
-    def match(text):
-        if not text:
-            return False
-        normal = unidecode.unidecode(text.lower())
-        return all(p in normal for p in unidecode.unidecode(juego.lower()).split())
-
     try:
-        response = requests.get(url, headers=headers, timeout=10)
-        response.raise_for_status()
-        soup = BeautifulSoup(response.text, "html.parser")
-
-        
-        productos = soup.select("div.card__information")
-        for producto in productos:
-            titulo_tag = producto.select_one("h3.card__heading")
-            precio_tag = producto.select_one("span.price-item--last")
-            link_tag = producto.find("a", href=True)
-            img_tag = producto.find_previous("img")
-            disponibilidad = producto.text.lower()
-            if titulo_tag and match(titulo_tag.text) and "agotado" not in disponibilidad:
-                return {
-                    "nombre": titulo_tag.text.strip(),
-                    "precio": precio_tag.text.strip() if precio_tag else "N/A",
-                    "url": base_url + link_tag["href"],
-                    "imagen": img_tag["src"] if img_tag else None
-                }
-        return None
-        
-
+        res = requests.get(url_busqueda, headers=headers, timeout=10)
+        res.raise_for_status()
     except Exception as e:
+        if debug:
+            print(f"Error accediendo a {url_busqueda}: {e}")
         return None
+
+    soup = BeautifulSoup(res.text, "html.parser")
+
+    
+    for producto in soup.select(".card__information"):
+        titulo_tag = producto.select_one("a")
+        if not titulo_tag or juego.lower() not in titulo_tag.text.lower():
+            continue
+        agotado = producto.select_one(".badge--sold-out")
+        if agotado:
+            continue
+        precio_tag = producto.select_one(".price-item--last")
+        imagen_tag = producto.find_previous("img")
+        return {
+            "precio": precio_tag.text.strip() if precio_tag else "N/A",
+            "url": "https://juegodebelugas.com" + titulo_tag["href"] if titulo_tag else "-",
+            "imagen": imagen_tag["src"] if imagen_tag else ""
+        }
+        
+
+    return None
