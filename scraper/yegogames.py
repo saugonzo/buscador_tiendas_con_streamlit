@@ -6,16 +6,20 @@ def buscar_yegogames(juego):
     res = requests.get(url)
     soup = BeautifulSoup(res.text, "html.parser")
 
-    productos = soup.select(".card__information")
+    productos = soup.select(".productgrid--item")
     for producto in productos:
-        titulo = producto.select_one(".card__heading a")
-        if titulo and juego.lower() in titulo.text.lower():
+        titulo_tag = producto.select_one(".productitem--title")
+        if titulo_tag and juego.lower() in titulo_tag.text.lower():
             if "agotado" in producto.text.lower():
-                return None
-            precio = producto.select_one(".price-item--last")
-            if precio:
+                continue
+            precio = producto.select_one(".productitem--price")
+            imagen = producto.select_one("img")
+            link_tag = producto.select_one("a")
+            if precio and imagen and link_tag:
                 return {
+                    "nombre": titulo_tag.text.strip(),
                     "precio": precio.text.strip(),
-                    "url": "https://yegogames.com" + titulo["href"]
+                    "url": "https://yegogames.com" + link_tag["href"],
+                    "imagen": imagen["src"] if imagen["src"].startswith("http") else "https:" + imagen["src"]
                 }
     return None

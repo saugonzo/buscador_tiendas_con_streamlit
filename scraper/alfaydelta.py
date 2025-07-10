@@ -12,12 +12,15 @@ def buscar_alfaydelta(juego):
         if titulo and juego.lower() in titulo.text.lower():
             agotado = producto.select_one(".badge__text")
             if agotado and "agotado" in agotado.text.lower():
-                return None
+                continue
             precio = producto.select_one(".product__price--original")
             link = producto.select_one("a")["href"]
+            imagen = producto.select_one("img")["src"]
             if precio and link:
                 return {
+                    "nombre": titulo.text.strip(),
                     "precio": precio.text.strip(),
-                    "url": "https://alfaydelta.com" + link
+                    "url": "https://alfaydelta.com" + link,
+                    "imagen": "https:" + imagen
                 }
     return None

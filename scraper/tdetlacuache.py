@@ -6,16 +6,20 @@ def buscar_tdetlacuache(juego):
     res = requests.get(url)
     soup = BeautifulSoup(res.text, "html.parser")
 
-    productos = soup.select(".card__information")
+    productos = soup.select(".grid-product__content")
     for producto in productos:
-        titulo = producto.select_one(".card__heading a")
-        if titulo and juego.lower() in titulo.text.lower():
+        titulo_tag = producto.select_one(".grid-product__title")
+        if titulo_tag and juego.lower() in titulo_tag.text.lower():
             if "agotado" in producto.text.lower():
-                return None
-            precio = producto.select_one(".price-item--last")
-            if precio:
+                continue
+            precio = producto.select_one(".grid-product__price")
+            imagen_tag = producto.find_previous("img")
+            link_tag = producto.find_previous("a")
+            if precio and imagen_tag and link_tag:
                 return {
+                    "nombre": titulo_tag.text.strip(),
                     "precio": precio.text.strip(),
-                    "url": "https://tdetlacuache.com" + titulo["href"]
+                    "url": "https://tdetlacuache.com" + link_tag["href"],
+                    "imagen": imagen_tag["src"] if imagen_tag["src"].startswith("http") else "https:" + imagen_tag["src"]
                 }
     return None

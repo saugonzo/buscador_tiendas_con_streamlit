@@ -6,16 +6,19 @@ def buscar_canteraludica(juego):
     res = requests.get(url)
     soup = BeautifulSoup(res.text, "html.parser")
 
-    productos = soup.select(".card__information")
+    productos = soup.select(".card-wrapper")
     for producto in productos:
         titulo_tag = producto.select_one(".card__heading a")
         if titulo_tag and juego.lower() in titulo_tag.text.lower():
             if "agotado" in producto.text.lower():
-                return None
+                continue
             precio = producto.select_one(".price-item--last")
-            if precio:
+            imagen = producto.select_one("img")
+            if precio and imagen:
                 return {
+                    "nombre": titulo_tag.text.strip(),
                     "precio": precio.text.strip(),
-                    "url": "https://canteraludica.com" + titulo_tag["href"]
+                    "url": "https://canteraludica.com" + titulo_tag["href"],
+                    "imagen": imagen["src"] if imagen["src"].startswith("http") else "https:" + imagen["src"]
                 }
     return None
