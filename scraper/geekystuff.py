@@ -8,37 +8,39 @@ def buscar_geekystuff(nombre_juego):
         response.raise_for_status()
         soup = BeautifulSoup(response.text, "html.parser")
 
-        productos = soup.select("a[href^='/product-page/']")  # enlaces a productos
+        productos = soup.select("a[href^='/product-page/']")
 
         for producto in productos:
+            link = "https://www.geekystuff.mx" + producto["href"]
             titulo = producto.get_text(strip=True)
-            if nombre_juego.lower() in titulo.lower():
-                link = "https://www.geekystuff.mx" + producto["href"]
 
-                # Ir al enlace del producto
-                producto_page = requests.get(link, timeout=10)
-                producto_page.raise_for_status()
-                prod_soup = BeautifulSoup(producto_page.text, "html.parser")
+            if nombre_juego.lower() not in titulo.lower():
+                continue
 
-                # Verificar si el producto está agotado
-                agotado_texto = prod_soup.find(string=lambda text: "agotado" in text.lower() or "sin existencias" in text.lower())
-                if agotado_texto:
-                    continue
+            # Cargar la página del producto
+            detalle = requests.get(link, timeout=10)
+            detalle.raise_for_status()
+            detalle_soup = BeautifulSoup(detalle.text, "html.parser")
 
-                # Extraer precio
-                precio_tag = prod_soup.select_one("span[data-hook='formatted-primary-price']")
-                precio = precio_tag.get_text(strip=True) if precio_tag else "Precio no disponible"
+            # Detectar disponibilidad
+            boton = detalle_soup.select_one("button[data-hook='add-to-cart']")
+            if not boton or "disabled" in boton.attrs:
+                continue  # Producto agotado
 
-                # Extraer imagen
-                img_tag = prod_soup.select_one("img[src*='geekystuff']")
-                imagen = img_tag["src"] if img_tag else ""
+            # Obtener precio
+            precio_tag = detalle_soup.select_one("span[data-hook='formatted-primary-price']")
+            precio = precio_tag.get_text(strip=True) if precio_tag else "Precio no disponible"
 
-                return {
-                    "titulo": titulo,
-                    "precio": precio,
-                    "url": link,
-                    "imagen": imagen
-                }
+            # Obtener imagen
+            img_tag = detalle_soup.select_one("img[src*='/product-page/']")
+            imagen = img_tag["src"] if img_tag else ""
+
+            return {
+                "titulo": titulo,
+                "precio": precio,
+                "url": link,
+                "imagen": imagen
+            }
 
         return None
     except Exception as e:
