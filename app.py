@@ -1,12 +1,20 @@
+
 import streamlit as st
 import sys
 import os
 import pandas as pd
 
-sys.path.append(os.path.join(os.path.dirname(__file__), "scraper"))
-
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from scraper.alfaydelta import buscar_alfaydelta
+from scraper.canteraludica import buscar_canteraludica
+from scraper.yegogames import buscar_yegogames
+from scraper.geekystuff import buscar_geekystuff
+from scraper.elduende import buscar_elduende
 from scraper.tdetlacuache import buscar_tdetlacuache
+from scraper.eurojuegos import buscar_eurojuegos
+from scraper.lacasadelaeducadora import buscar_lacasadelaeducadora
+from scraper.juegodebelugas import buscar_juegodebelugas
+from scraper.infiniteskill import buscar_infiniteskill
 
 st.set_page_config(page_title="Buscador de Juegos de Mesa", layout="wide")
 st.title("🔍 Buscador de Juegos de Mesa en Tiendas Mexicanas")
@@ -18,40 +26,54 @@ if st.button("Buscar"):
 
     tiendas = [
         ("Alfa y Delta", buscar_alfaydelta),
+        ("Cantera Lúdica", buscar_canteraludica),
+        ("Yego Games", buscar_yegogames),
+        ("Geeky Stuff", buscar_geekystuff),
+        ("El Duende", buscar_elduende),
         ("T de Tlacuache", buscar_tdetlacuache),
+        ("Eurojuegos", buscar_eurojuegos),
+        ("La Casa de la Educadora", buscar_lacasadelaeducadora),
+        ("Juegos de Belugas", buscar_juegodebelugas),
+        ("InfiniteSkill", buscar_infiniteskill),
     ]
 
     resultados = []
     for nombre, funcion in tiendas:
         try:
             info = funcion(juego)
-            if info:
+            if info and info.get("precio") and info.get("disponible", True):
                 resultados.append({
                     "Tienda": nombre,
-                    "Precio": info["precio"],
-                    "Link": info["url"],
-                    "Imagen": info["imagen"]
+                    "Precio": info.get("precio", "No disponible"),
+                    "Link": info.get("url", ""),
+                    "Imagen": info.get("imagen", "")
                 })
             else:
                 resultados.append({
                     "Tienda": nombre,
                     "Precio": "No disponible",
-                    "Link": "-",
-                    "Imagen": None
+                    "Link": "",
+                    "Imagen": ""
                 })
         except Exception as e:
             resultados.append({
                 "Tienda": nombre,
-                "Precio": f"❌ Error: {e}",
-                "Link": "-",
-                "Imagen": None
+                "Precio": f"❌ Error: {str(e)}",
+                "Link": "",
+                "Imagen": ""
             })
 
-    for row in resultados:
+    df = pd.DataFrame(resultados)
+
+    for idx, row in df.iterrows():
         cols = st.columns([1, 2, 2])
-        cols[0].image(row["Imagen"], use_column_width=True) if row["Imagen"] else cols[0].write("Sin imagen")
+        if row["Imagen"]:
+            cols[0].image(row["Imagen"], use_column_width=True)
+        else:
+            cols[0].write("Sin imagen")
+
         cols[1].markdown(f"**{row['Tienda']}**")
-        if row["Link"] != "-" and "http" in row["Link"]:
+        if row["Link"] and row["Precio"]:
             cols[2].markdown(f"[{row['Precio']}]({row['Link']})")
         else:
-            cols[2].write(row["Precio"])
+            cols[2].write("No disponible")
