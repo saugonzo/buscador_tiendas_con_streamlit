@@ -1,47 +1,59 @@
+# scraper/yegogames.py
+
 import requests
 from bs4 import BeautifulSoup
 
 def buscar_yegogames(juego: str) -> dict | None:
-    url_busqueda = f"https://yegogames.com/search?q={juego.replace(' ', '+')}"
-    headers = {
-        "User-Agent": "Mozilla/5.0"
-    }
+    url = f"https://yegogames.com/search?q={juego.replace(' ', '+')}"
+    headers = {"User-Agent": "Mozilla/5.0"}
 
     try:
-        response = requests.get(url_busqueda, headers=headers, timeout=10)
-        response.raise_for_status()
-        soup = BeautifulSoup(response.text, "html.parser")
+        res = requests.get(url, headers=headers, timeout=10)
+        res.raise_for_status()
+        soup = BeautifulSoup(res.text, "html.parser")
 
-        producto = soup.find("div", class_="card__information")
-        if not producto:
-            return None
+        productos = soup.select("li.grid__item")
 
-        nombre = producto.find("h3").get_text(strip=True)
-        if juego.lower() not in nombre.lower():
-            return None
+        for prod in productos:
+            info = prod.select_one("div.card__information")
+            if not info:
+                continue
 
-        precio_tag = producto.find("span", class_="price-item--regular")
-        if not precio_tag:
-            return None
+            nombre_tag = info.select_one("h3.card__heading a")
+            if not nombre_tag:
+                continue
+            nombre = nombre_tag.get_text(strip=True)
+            if juego.lower() not in nombre.lower():
+                continue
 
-        agotado = producto.find("div", class_="badge badge--bottom-left")  # a veces aparece como "Agotado"
-        if agotado and "agotado" in agotado.get_text(strip=True).lower():
-            return None
+            # Revisamos precio (oferta o regular)
+            precio_tag = info.select_one(".price-item--sale") or info.select_one(".price-item--regular")
+            if not precio_tag:
+                continue
 
-        precio = precio_tag.get_text(strip=True).replace("$", "").replace("MXN", "").strip()
+            # Si está marcado como agotado, lo descartamos
+            agotado = prod.select_one(".badge--bottom-left")
+            if agotado and "agotado" in agotado.get_text(strip=True).lower():
+                continue
 
-        link = producto.find("a", class_="full-unstyled-link")
-        url_producto = f"https://yegogames.com{link['href']}" if link else url_busqueda
+            precio = precio_tag.get_text(strip=True)
+            link = nombre_tag["href"]
+            if not link.startswith("http"):
+                link = "https://yegogames.com" + link
 
-        imagen_tag = producto.find_parent().find("img")
-        imagen_url = "https:" + imagen_tag["src"] if imagen_tag and imagen_tag.get("src") else ""
+            img = prod.select_one("img")
+            imagen = img["src"] if img and img.get("src") else ""
+            if imagen.startswith("//"):
+                imagen = "https:" + imagen
 
-        return {
-            "precio": precio,
-            "url": url_producto,
-            "imagen": imagen_url
-        }
+            return {
+                "nombre": nombre,
+                "precio": precio,
+                "url": link,
+                "imagen": imagen
+            }
 
     except Exception as e:
-        print(f"Error al buscar en Yego Games: {e}")
-        return None
+        print("Error al buscar en YegoGames:", e)
+
+    return None
