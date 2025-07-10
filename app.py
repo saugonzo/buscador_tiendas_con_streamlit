@@ -1,7 +1,8 @@
-
 import streamlit as st
 import sys
 import os
+import pandas as pd
+
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from scraper.alfaydelta import buscar_alfaydelta
 from scraper.canteraludica import buscar_canteraludica
@@ -12,14 +13,14 @@ from scraper.tdetlacuache import buscar_tdetlacuache
 from scraper.eurojuegos import buscar_eurojuegos
 from scraper.lacasadelaeducadora import buscar_lacasadelaeducadora
 from scraper.juegodebelugas import buscar_juegodebelugas
-import pandas as pd
 
 st.set_page_config(page_title="Buscador de Juegos de Mesa", layout="centered")
 st.title("🔍 Buscador de Juegos de Mesa en Tiendas Mexicanas")
 
-juego = st.text_input("Escribe el nombre del juego:")
+juego = st.text_input("Escribe el nombre del juego:", "")
+modo_diagnostico = st.checkbox("🔍 Mostrar todos los productos encontrados (modo diagnóstico)", value=False)
 
-if st.button("Buscar") and juego.strip():
+if st.button("Buscar"):
     st.info(f"Buscando '{juego}' en tiendas disponibles...")
 
     tiendas = [
@@ -35,16 +36,24 @@ if st.button("Buscar") and juego.strip():
     ]
 
     resultados = []
-descartes = []
+    descartes = []
+
     for nombre, funcion in tiendas:
         try:
             info = funcion(juego, debug=modo_diagnostico)
-            if isinstance(info, dict) and info.get("precio") and info.get("url") and not info.get("agotado", False):
+            if info:
                 resultados.append({
                     "Tienda": nombre,
                     "Precio": f"${info['precio']}",
-                    "Link": f"[Ver producto]({info['url']})",
-                    "Imagen": info.get("imagen", "")
+                    "Link": info['url'],
+                    "Imagen": info.get('imagen', '')
+                })
+            else:
+                resultados.append({
+                    "Tienda": nombre,
+                    "Precio": "No disponible",
+                    "Link": "-",
+                    "Imagen": ""
                 })
         except Exception as e:
             resultados.append({
@@ -54,17 +63,9 @@ descartes = []
                 "Imagen": ""
             })
 
-    if resultados:
-        df = pd.DataFrame(resultados)
-        for _, row in df.iterrows():
-            st.markdown(f"### 🛒 {row['Tienda']}")
-            col1, col2 = st.columns([1, 3])
-            with col1:
-                if row["Imagen"]:
-                    st.image(row["Imagen"], width=120)
-            with col2:
-                st.markdown(f"**Precio:** {row['Precio']}")
-                st.markdown(f"{row['Link']}")
-            st.markdown("---")
-    else:
-        st.warning("No se encontraron productos disponibles.")
+    df = pd.DataFrame(resultados)
+    st.dataframe(df, use_container_width=True)
+
+    if modo_diagnostico and descartes:
+        st.subheader("🛠 Productos descartados")
+        st.dataframe(pd.DataFrame(descartes), use_container_width=True)
