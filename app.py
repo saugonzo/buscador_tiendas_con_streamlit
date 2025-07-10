@@ -57,5 +57,10 @@ if st.button("Buscar"):
                 "Link": "-"
             })
 
-    df = pd.DataFrame(resultados)
-    st.dataframe(df, use_container_width=True)
+    st.markdown("### Resultados")
+for r in resultados:
+    if r["Link"] != "-":
+        st.markdown(f"- **{r['Tienda']}**: {r['Precio']} – [Ver juego]({r['Link']})", unsafe_allow_html=True)
+    else:
+        st.markdown(f"- **{r['Tienda']}**: {r['Precio']}")
+
