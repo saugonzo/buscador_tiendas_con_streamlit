@@ -1,16 +1,21 @@
 import requests
 from bs4 import BeautifulSoup
 
-def buscar_juegodebelugas(nombre_juego):
-    url = "https://juegodebelugas.com/search?q=" + nombre_juego.replace(" ", "+")
-    response = requests.get(url)
-    soup = BeautifulSoup(response.text, "html.parser")
+def buscar_juegodebelugas(juego):
+    url = "https://juegodebelugas.com/search?q=" + juego.replace(" ", "+")
+    res = requests.get(url)
+    soup = BeautifulSoup(res.text, "html.parser")
 
-    producto = soup.find("a", class_="full-unstyled-link")
-    if producto and nombre_juego.lower() in producto.text.lower():
-        precio = producto.find_next("span", class_="price-item--last")
-        return {
-            "precio": precio.text.strip().replace("$", "").replace("MXN", "").strip(),
-            "url": "https://juegodebelugas.com" + producto["href"]
-        }
+    productos = soup.select(".card__information")
+    for producto in productos:
+        titulo = producto.select_one(".card__heading a")
+        if titulo and juego.lower() in titulo.text.lower():
+            if "agotado" in producto.text.lower():
+                return None
+            precio = producto.select_one(".price-item--last")
+            if precio:
+                return {
+                    "precio": precio.text.strip(),
+                    "url": "https://juegodebelugas.com" + titulo["href"]
+                }
     return None

@@ -1,17 +1,22 @@
 import requests
 from bs4 import BeautifulSoup
 
-def buscar_geekystuff(nombre_juego):
-    url = "https://www.geekystuff.mx/search?query=" + nombre_juego.replace(" ", "%20")
-    response = requests.get(url)
-    soup = BeautifulSoup(response.text, "html.parser")
+def buscar_geekystuff(juego):
+    url = "https://www.geekystuff.mx/search?query=" + juego.replace(" ", "%20")
+    res = requests.get(url)
+    soup = BeautifulSoup(res.text, "html.parser")
 
-    producto = soup.find("div", class_="search_res_item_snippet")
-    if producto and nombre_juego.lower() in producto.text.lower():
-        enlace = producto.find("a", href=True)
-        precio = producto.find("div", class_="isp_product_price")
-        return {
-            "precio": precio.text.strip().replace("MXN", "").replace("$", "").strip(),
-            "url": enlace["href"]
-        }
+    productos = soup.select(".search_res_item_snippet")
+    for producto in productos:
+        titulo = producto.select_one(".search_res_item_title a")
+        if titulo and juego.lower() in titulo.text.lower():
+            if "agotado" in producto.text.lower():
+                return None
+            precio = producto.select_one(".isp_product_price")
+            link = titulo["href"]
+            if precio and link:
+                return {
+                    "precio": precio.text.strip(),
+                    "url": link
+                }
     return None

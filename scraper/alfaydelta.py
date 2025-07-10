@@ -1,19 +1,23 @@
 import requests
 from bs4 import BeautifulSoup
 
-def buscar_alfaydelta(nombre_juego):
-    url = "https://alfaydelta.com/search?q=" + nombre_juego.replace(" ", "+")
-    response = requests.get(url)
-    soup = BeautifulSoup(response.text, "html.parser")
+def buscar_alfaydelta(juego):
+    url = "https://alfaydelta.com/search?q=" + juego.replace(" ", "+")
+    res = requests.get(url)
+    soup = BeautifulSoup(res.text, "html.parser")
 
-    producto = soup.find("div", class_="product-item")
-    if producto:
-        titulo = producto.find("span", class_="product-item__title")
-        if titulo and nombre_juego.lower() in titulo.text.lower():
-            precio = producto.find("span", class_="product__price--original")
-            enlace = producto.find("a", class_="product-item__link")
-            return {
-                "precio": precio.text.strip().replace("$", "").replace("MXN", "").strip(),
-                "url": "https://alfaydelta.com" + enlace["href"]
-            }
+    productos = soup.select(".product-item")
+    for producto in productos:
+        titulo = producto.select_one(".product-item__title")
+        if titulo and juego.lower() in titulo.text.lower():
+            agotado = producto.select_one(".badge__text")
+            if agotado and "agotado" in agotado.text.lower():
+                return None
+            precio = producto.select_one(".product__price--original")
+            link = producto.select_one("a")["href"]
+            if precio and link:
+                return {
+                    "precio": precio.text.strip(),
+                    "url": "https://alfaydelta.com" + link
+                }
     return None
