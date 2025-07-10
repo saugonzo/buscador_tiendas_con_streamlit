@@ -1,51 +1,47 @@
 import requests
 from bs4 import BeautifulSoup
 
-def buscar_yegogames(juego_buscado):
-    url = f"https://yegogames.com/search?q={juego_buscado.replace(' ', '+')}"
-    headers = {"User-Agent": "Mozilla/5.0"}
+def buscar_yegogames(juego: str) -> dict | None:
+    url_busqueda = f"https://yegogames.com/search?q={juego.replace(' ', '+')}"
+    headers = {
+        "User-Agent": "Mozilla/5.0"
+    }
 
     try:
-        response = requests.get(url, headers=headers, timeout=10)
+        response = requests.get(url_busqueda, headers=headers, timeout=10)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, "html.parser")
 
-        productos = soup.select("div.card__information")
+        producto = soup.find("div", class_="card__information")
+        if not producto:
+            return None
 
-        for producto in productos:
-            nombre_tag = producto.select_one("h3.card__heading a")
-            if not nombre_tag:
-                continue
+        nombre = producto.find("h3").get_text(strip=True)
+        if juego.lower() not in nombre.lower():
+            return None
 
-            nombre = nombre_tag.get_text(strip=True)
-            if juego_buscado.lower() not in nombre.lower():
-                continue
+        precio_tag = producto.find("span", class_="price-item--regular")
+        if not precio_tag:
+            return None
 
-            # Verifica que no esté agotado (por lo general no hay etiqueta clara, así que validamos existencia del botón de compra más adelante si necesario)
-            precio_tag = producto.select_one(".price__sale .price-item--sale") or producto.select_one(".price__regular .price-item--regular")
-            if not precio_tag:
-                continue
+        agotado = producto.find("div", class_="badge badge--bottom-left")  # a veces aparece como "Agotado"
+        if agotado and "agotado" in agotado.get_text(strip=True).lower():
+            return None
 
-            precio = precio_tag.get_text(strip=True)
+        precio = precio_tag.get_text(strip=True).replace("$", "").replace("MXN", "").strip()
 
-            link = nombre_tag["href"]
-            if not link.startswith("http"):
-                link = "https://yegogames.com" + link
+        link = producto.find("a", class_="full-unstyled-link")
+        url_producto = f"https://yegogames.com{link['href']}" if link else url_busqueda
 
-            # Imagen
-            imagen_tag = producto.find_parent("div.card-wrapper").select_one("img")
-            imagen = imagen_tag["src"] if imagen_tag else None
-            if imagen and imagen.startswith("//"):
-                imagen = "https:" + imagen
+        imagen_tag = producto.find_parent().find("img")
+        imagen_url = "https:" + imagen_tag["src"] if imagen_tag and imagen_tag.get("src") else ""
 
-            return {
-                "nombre": nombre,
-                "precio": precio,
-                "url": link,
-                "imagen": imagen
-            }
+        return {
+            "precio": precio,
+            "url": url_producto,
+            "imagen": imagen_url
+        }
 
     except Exception as e:
-        return {"error": str(e)}
-
-    return None
+        print(f"Error al buscar en Yego Games: {e}")
+        return None
