@@ -25,8 +25,8 @@ def buscar_geekystuff(nombre_juego):
 
             enlace_tag = item.find("a", {"data-hook": "product-item-product-details-link"})
             enlace = enlace_tag["href"] if enlace_tag else ""
-if enlace and not enlace.startswith("http"):
-    enlace = "https://www.geekystuff.mx" + enlace
+            if enlace and not enlace.startswith("http"):
+                enlace = "https://www.geekystuff.mx" + enlace
 
             precio_tag = item.find("span", {"data-hook": "product-item-price-to-pay"})
             precio = precio_tag.get_text(strip=True) if precio_tag else "N/A"
