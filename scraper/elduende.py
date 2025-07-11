@@ -1,53 +1,42 @@
 import requests
 from bs4 import BeautifulSoup
 
-def buscar_elduende(juego_buscado):
-    url = f"https://elduende.com.mx/search?q={juego_buscado.replace(' ', '+')}"
+def buscar_elduende(juego):
+    url_busqueda = f"https://www.elduende.com.mx/?s={juego}&post_type=product&dgwt_wcas=1"
     headers = {"User-Agent": "Mozilla/5.0"}
+    res = requests.get(url_busqueda, headers=headers)
+    soup = BeautifulSoup(res.text, "html.parser")
 
-    try:
-        response = requests.get(url, headers=headers, timeout=10)
-        response.raise_for_status()
-        soup = BeautifulSoup(response.text, "html.parser")
+    # Caso 1: Redirigió directamente a una página de producto
+    if soup.find("body", class_="single-product"):
+        nombre = soup.find("h1", class_="product_title").text.strip()
+        precio = soup.find("bdi").text.strip()
+        imagen_tag = soup.find("img", class_="wp-post-image")
+        imagen = imagen_tag["src"] if imagen_tag else ""
+        return {
+            "nombre": nombre,
+            "precio": precio,
+            "url": res.url,
+            "imagen": imagen
+        }
 
-        productos = soup.select("li.grid__item")
+    # Caso 2: Página de resultados múltiples
+    contenedor = soup.find("ul", class_="products")
+    if not contenedor:
+        return None
 
-        for producto in productos:
-            nombre_tag = producto.select_one("h3.card__heading a")
-            if not nombre_tag:
-                continue
+    producto = contenedor.find("li")
+    if not producto:
+        return None
 
-            nombre = nombre_tag.get_text(strip=True)
-            if juego_buscado.lower() not in nombre.lower():
-                continue
+    nombre = producto.find("h2", class_="woocommerce-loop-product__title").text.strip()
+    precio = producto.find("bdi").text.strip()
+    url = producto.find("a", href=True)["href"]
+    imagen = producto.find("img", src=True)["src"]
 
-            agotado = producto.select_one(".badge--sold-out")
-            if agotado:
-                continue  # Producto agotado
-
-            precio_tag = producto.select_one(".price__sale .price-item--last, .price__regular .price-item--regular")
-            if not precio_tag:
-                continue  # Sin precio visible
-
-            precio = precio_tag.get_text(strip=True)
-
-            url_producto = nombre_tag["href"]
-            if not url_producto.startswith("http"):
-                url_producto = "https://elduende.com.mx" + url_producto
-
-            imagen_tag = producto.find("img")
-            imagen = imagen_tag["src"] if imagen_tag and "src" in imagen_tag.attrs else None
-            if imagen and imagen.startswith("//"):
-                imagen = "https:" + imagen
-
-            return {
-                "nombre": nombre,
-                "precio": precio,
-                "url": url_producto,
-                "imagen": imagen
-            }
-
-    except Exception as e:
-        return {"error": str(e)}
-
-    return None
+    return {
+        "nombre": nombre,
+        "precio": precio,
+        "url": url,
+        "imagen": imagen
+    }
