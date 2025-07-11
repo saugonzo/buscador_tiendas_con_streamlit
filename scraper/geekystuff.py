@@ -2,7 +2,6 @@ import requests
 from bs4 import BeautifulSoup
 
 def buscar_geekystuff(nombre_juego):
-    resultados = []
     url = f"https://www.geekystuff.mx/search?query={nombre_juego}"
     headers = {
         "User-Agent": "Mozilla/5.0"
@@ -33,22 +32,14 @@ def buscar_geekystuff(nombre_juego):
 
             img_tag = item.find("img")
             imagen = img_tag["src"] if img_tag else None
+            return {
+                "nombre": nombre_texto,
+                "precio": precio,
+                "url": enlace,
+                "imagen": imagen,
+            }
 
-            resultados.append({
-                "Tienda": "Geeky Stuff",
-                "Nombre": nombre_texto,
-                "Precio": precio,
-                "Link": enlace,
-                "Imagen": imagen,
-            })
+    except Exception:
+        return None
 
-    except Exception as e:
-        resultados.append({
-            "Tienda": "Geeky Stuff",
-            "Nombre": f"❌ Error: {str(e)}",
-            "Precio": "",
-            "Link": "",
-            "Imagen": None,
-        })
-
-    return resultados
+    return None
