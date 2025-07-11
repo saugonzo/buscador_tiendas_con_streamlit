@@ -2,46 +2,51 @@ import requests
 from bs4 import BeautifulSoup
 
 def buscar_geekystuff(nombre_juego):
+    resultados = []
+    url = f"https://www.geekystuff.mx/search?query={nombre_juego}"
+    headers = {
+        "User-Agent": "Mozilla/5.0"
+    }
+
     try:
-        url = f"https://www.geekystuff.mx/search?query={nombre_juego}"
-        response = requests.get(url, timeout=10)
+        response = requests.get(url, headers=headers, timeout=10)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, "html.parser")
+        items = soup.find_all("li", {"data-hook": "product-list-grid-item"})
 
-        productos = soup.select("a[href^='/product-page/']")
+        for item in items:
+            nombre = item.find("p", {"data-hook": "product-item-name"})
+            if not nombre:
+                continue
+            nombre_texto = nombre.get_text(strip=True)
 
-        for producto in productos:
-            link = "https://www.geekystuff.mx" + producto["href"]
-            titulo = producto.get_text(strip=True)
-
-            if nombre_juego.lower() not in titulo.lower():
+            if nombre_juego.lower() not in nombre_texto.lower():
                 continue
 
-            # Cargar la página del producto
-            detalle = requests.get(link, timeout=10)
-            detalle.raise_for_status()
-            detalle_soup = BeautifulSoup(detalle.text, "html.parser")
+            enlace_tag = item.find("a", href=True)
+            enlace = "https://www.geekystuff.mx" + enlace_tag["href"] if enlace_tag else ""
 
-            # Detectar disponibilidad
-            boton = detalle_soup.select_one("button[data-hook='add-to-cart']")
-            if not boton or "disabled" in boton.attrs:
-                continue  # Producto agotado
+            precio_tag = item.find("span", {"data-hook": "product-item-price-to-pay"})
+            precio = precio_tag.get_text(strip=True) if precio_tag else "N/A"
 
-            # Obtener precio
-            precio_tag = detalle_soup.select_one("span[data-hook='formatted-primary-price']")
-            precio = precio_tag.get_text(strip=True) if precio_tag else "Precio no disponible"
+            img_tag = item.find("img")
+            imagen = img_tag["src"] if img_tag else None
 
-            # Obtener imagen
-            img_tag = detalle_soup.select_one("img[src*='/product-page/']")
-            imagen = img_tag["src"] if img_tag else ""
+            resultados.append({
+                "Tienda": "Geeky Stuff",
+                "Nombre": nombre_texto,
+                "Precio": precio,
+                "Link": enlace,
+                "Imagen": imagen,
+            })
 
-            return {
-                "titulo": titulo,
-                "precio": precio,
-                "url": link,
-                "imagen": imagen
-            }
-
-        return None
     except Exception as e:
-        return {"error": str(e)}
+        resultados.append({
+            "Tienda": "Geeky Stuff",
+            "Nombre": f"❌ Error: {str(e)}",
+            "Precio": "",
+            "Link": "",
+            "Imagen": None,
+        })
+
+    return resultados
