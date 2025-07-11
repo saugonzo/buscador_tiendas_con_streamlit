@@ -15,31 +15,31 @@ def buscar_geekystuff(nombre_juego):
         items = soup.find_all("li", {"data-hook": "product-list-grid-item"})
 
         for item in items:
-            nombre = item.find("p", {"data-hook": "product-item-name"})
-            if not nombre:
+            nombre_tag = item.find("p", {"data-hook": "product-item-name"})
+            if not nombre_tag:
                 continue
-            nombre_texto = nombre.get_text(strip=True)
 
-            if nombre_juego.lower() not in nombre_texto.lower():
+            nombre = nombre_tag.get_text(strip=True)
+            if nombre_juego.lower() not in nombre.lower():
                 continue
 
             enlace_tag = item.find("a", {"data-hook": "product-item-product-details-link"})
-            enlace = enlace_tag["href"] if enlace_tag else ""
-            if enlace and not enlace.startswith("http"):
+            enlace = enlace_tag["href"] if enlace_tag and enlace_tag.get("href") else ""
+            if not enlace.startswith("http"):
                 enlace = "https://www.geekystuff.mx" + enlace
 
             precio_tag = item.find("span", {"data-hook": "product-item-price-to-pay"})
             precio = precio_tag.get_text(strip=True) if precio_tag else "N/A"
 
             img_tag = item.find("img")
-            imagen = img_tag["src"] if img_tag else None
+            imagen = img_tag["src"] if img_tag and img_tag.get("src") else None
 
             resultados.append({
                 "Tienda": "Geeky Stuff",
-                "Nombre": nombre_texto,
+                "Nombre": nombre,
                 "Precio": precio,
                 "Link": enlace,
-                "Imagen": imagen,
+                "Imagen": imagen
             })
 
     except Exception as e:
@@ -48,7 +48,7 @@ def buscar_geekystuff(nombre_juego):
             "Nombre": f"❌ Error: {str(e)}",
             "Precio": "",
             "Link": "",
-            "Imagen": None,
+            "Imagen": None
         })
 
     return resultados
