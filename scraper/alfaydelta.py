@@ -1,43 +1,38 @@
 import requests
 from bs4 import BeautifulSoup
-import unidecode
 
 def buscar_alfaydelta(juego):
-    url_base = "https://alfaydelta.com"
-    busqueda = juego.replace(" ", "+")
-    url = f"https://alfaydelta.com/search?q=" + busqueda
-    headers = {
-        "User-Agent": "Mozilla/5.0"
-    }
+    url_busqueda = f"https://www.alfaydelta.com.mx/search?q={juego}"
+    response = requests.get(url_busqueda, timeout=10)
+    soup = BeautifulSoup(response.text, "html.parser")
 
-    def match(text):
-        if not text:
-            return False
-        normal = unidecode.unidecode(text.lower())
-        return all(p in normal for p in unidecode.unidecode(juego.lower()).split())
+    resultados = []
+    productos = soup.select(".productgrid--item")
 
-    try:
-        response = requests.get(url, headers=headers, timeout=10)
-        response.raise_for_status()
-        soup = BeautifulSoup(response.text, "html.parser")
+    for producto in productos:
+        nombre = producto.select_one(".productitem--title")
+        precio = producto.select_one(".money")
+        link_tag = producto.select_one("a")
+        imagen_tag = producto.select_one("img")
 
-        
-        productos = soup.select("div.product-item")
-        for producto in productos:
-            titulo_tag = producto.select_one("span.product-item__title")
-            precio_tag = producto.select_one("span.product__price--original")
-            link_tag = producto.find("a", href=True)
-            img_tag = producto.select_one("img")
-            disponibilidad = producto.text.lower()
-            if titulo_tag and match(titulo_tag.text) and "agotado" not in disponibilidad:
-                return {
-                    "nombre": titulo_tag.text.strip(),
-                    "precio": precio_tag.text.strip() if precio_tag else "N/A",
-                    "url": url_base + link_tag["href"],
-                    "imagen": "https:" + img_tag["src"] if img_tag else None
-                }
-        return None
-        
+        if not (nombre and precio and link_tag and imagen_tag):
+            continue  # Saltar si falta algún dato importante
 
-    except Exception as e:
-        return None
+        url = "https://www.alfaydelta.com.mx" + link_tag["href"]
+        nombre = nombre.text.strip()
+        precio = precio.text.strip().replace("\n", "")
+        imagen = "https:" + imagen_tag.get("src", "")
+
+        # Determinar si está disponible (no dice "Agotado")
+        agotado = producto.select_one(".productitem--badge")
+        disponible = not (agotado and "agotado" in agotado.text.lower())
+
+        resultados.append({
+            "nombre": nombre,
+            "precio": precio,
+            "url": url,
+            "imagen": imagen,
+            "disponible": disponible
+        })
+
+    return resultados
