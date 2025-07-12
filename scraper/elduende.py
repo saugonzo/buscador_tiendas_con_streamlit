@@ -13,11 +13,6 @@ def buscar_elduende(nombre_juego):
             if not titulo_elem or nombre_juego.lower() not in titulo_elem.text.lower():
                 continue
 
-            # Verifica si está agotado
-            stock_elem = producto.select_one('.out-of-stock')
-            if stock_elem:
-                continue  # Saltar si está agotado
-
             url_elem = producto.select_one('a.woocommerce-LoopProduct-link')
             precio_elem = producto.select_one('span.price')
             imagen_elem = producto.select_one('img')
@@ -25,10 +20,19 @@ def buscar_elduende(nombre_juego):
             if not url_elem or not precio_elem:
                 continue
 
+            # Verificar stock dentro de la página del producto
+            producto_url = url_elem['href']
+            detalle = requests.get(producto_url, headers=headers, timeout=10)
+            detalle_soup = BeautifulSoup(detalle.text, "html.parser")
+            agotado = detalle_soup.select_one('.stock.out-of-stock')  # Clase típica en WooCommerce
+
+            if agotado:
+                continue  # Producto agotado, lo ignoramos
+
             return {
                 "titulo": titulo_elem.text.strip(),
                 "precio": precio_elem.text.strip(),
-                "url": url_elem['href'],
+                "url": producto_url,
                 "imagen": imagen_elem['src'] if imagen_elem else None,
             }
 
