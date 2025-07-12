@@ -1,40 +1,57 @@
-from bs4 import BeautifulSoup
 import requests
+from bs4 import BeautifulSoup
 
-def buscar_elduende(query):
-    url_busqueda = f"https://www.elduende.com.mx/?s={query}&post_type=product"
-    headers = {"User-Agent": "Mozilla/5.0"}
-    response = requests.get(url_busqueda, headers=headers)
-    soup = BeautifulSoup(response.text, "html.parser")
-
+def buscar_elduende(nombre_juego):
     resultados = []
-    productos = soup.select("li.product")
+    url = f"https://www.elduende.com.mx/?s={nombre_juego}&post_type=product&dgwt_wcas=1"
+    headers = {"User-Agent": "Mozilla/5.0"}
 
-    for producto in productos:
-        nombre_elem = producto.select_one("h2.woocommerce-loop-product__title")
-        precio_elem = producto.select_one("span.woocommerce-Price-amount")
-        link_elem = producto.select_one("a.woocommerce-LoopProduct-link")
-        imagen_elem = producto.select_one("img")
+    try:
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, "html.parser")
+        items = soup.select("ul.products li.product")
 
-        if not nombre_elem or not precio_elem or not link_elem:
-            continue
+        for item in items:
+            nombre_tag = item.select_one("h2.woocommerce-loop-product__title")
+            enlace_tag = item.select_one("a.woocommerce-LoopProduct-link")
+            precio_tag = item.select_one("span.woocommerce-Price-amount")
+            img_tag = item.select_one("img")
 
-        nombre = nombre_elem.text.strip()
-        precio = precio_elem.text.strip()
-        url = link_elem["href"]
-        imagen = imagen_elem["src"] if imagen_elem else ""
+            if not nombre_tag or not enlace_tag:
+                continue
 
-        # Verificar si está agotado
-        detalle_html = requests.get(url, headers=headers).text
-        detalle_soup = BeautifulSoup(detalle_html, "html.parser")
-        agotado = detalle_soup.select_one(".single_add_to_cart_button.button.alt.disabled") or "Avísame" in detalle_html
+            nombre = nombre_tag.get_text(strip=True)
+            enlace = enlace_tag["href"]
+            precio = precio_tag.get_text(strip=True) if precio_tag else "N/A"
+            imagen = img_tag["src"] if img_tag else None
 
-        resultados.append({
-            "nombre": nombre,
-            "precio": precio,
-            "url": url,
-            "imagen": imagen,
-            "disponible": not agotado
-        })
+            # Verificamos disponibilidad accediendo a la página del producto
+            disponible = False
+            try:
+                producto_response = requests.get(enlace, headers=headers, timeout=10)
+                producto_response.raise_for_status()
+                producto_soup = BeautifulSoup(producto_response.text, "html.parser")
+                add_to_cart = producto_soup.select_one("button.single_add_to_cart_button")
+                disponible = add_to_cart is not None
+            except:
+                pass
 
-    return resultados
+            resultados.append({
+                "nombre": nombre,
+                "precio": precio,
+                "url": enlace,
+                "imagen": imagen,
+                "disponible": disponible
+            })
+
+        return resultados
+
+    except Exception as e:
+        return [{
+            "nombre": f"❌ Error: {str(e)}",
+            "precio": "",
+            "url": "",
+            "imagen": None,
+            "disponible": False
+        }]
