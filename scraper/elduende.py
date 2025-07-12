@@ -1,34 +1,40 @@
-import requests
 from bs4 import BeautifulSoup
+import requests
 
-def buscar_elduende(juego: str):
-    url_busqueda = f"https://www.elduende.com.mx/?s={juego}&post_type=product&dgwt_wcas=1"
+def buscar_elduende(query):
+    url_busqueda = f"https://www.elduende.com.mx/?s={query}&post_type=product"
     headers = {"User-Agent": "Mozilla/5.0"}
     response = requests.get(url_busqueda, headers=headers)
     soup = BeautifulSoup(response.text, "html.parser")
 
-    # Busca el primer producto que coincida
-    producto = soup.select_one("ul.products li.product a.woocommerce-LoopProduct-link")
-    if not producto:
-        return None
+    resultados = []
+    productos = soup.select("li.product")
 
-    url_producto = producto["href"]
-    response_producto = requests.get(url_producto, headers=headers)
-    soup_producto = BeautifulSoup(response_producto.text, "html.parser")
+    for producto in productos:
+        nombre_elem = producto.select_one("h2.woocommerce-loop-product__title")
+        precio_elem = producto.select_one("span.woocommerce-Price-amount")
+        link_elem = producto.select_one("a.woocommerce-LoopProduct-link")
+        imagen_elem = producto.select_one("img")
 
-    # Busca el botón de agregar al carrito
-    boton_carrito = soup_producto.select_one("button.single_add_to_cart_button")
-    if not boton_carrito:
-        return None  # No se puede comprar, está agotado
+        if not nombre_elem or not precio_elem or not link_elem:
+            continue
 
-    titulo = soup_producto.select_one("h1.product_title").get_text(strip=True)
-    precio = soup_producto.select_one("p.price").get_text(strip=True)
-    imagen_tag = soup_producto.select_one("figure.woocommerce-product-gallery__wrapper img")
-    imagen = imagen_tag["src"] if imagen_tag else ""
+        nombre = nombre_elem.text.strip()
+        precio = precio_elem.text.strip()
+        url = link_elem["href"]
+        imagen = imagen_elem["src"] if imagen_elem else ""
 
-    return {
-        "nombre": titulo,
-        "precio": precio,
-        "url": url_producto,
-        "imagen": imagen,
-    }
+        # Verificar si está agotado
+        detalle_html = requests.get(url, headers=headers).text
+        detalle_soup = BeautifulSoup(detalle_html, "html.parser")
+        agotado = detalle_soup.select_one(".single_add_to_cart_button.button.alt.disabled") or "Avísame" in detalle_html
+
+        resultados.append({
+            "nombre": nombre,
+            "precio": precio,
+            "url": url,
+            "imagen": imagen,
+            "disponible": not agotado
+        })
+
+    return resultados
