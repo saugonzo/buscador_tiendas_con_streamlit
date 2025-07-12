@@ -18,7 +18,7 @@ def buscar_alfaydelta(juego):
         link_tag = producto.select_one("a.full-unstyled-link")
 
         if not (nombre_tag and precio_tag and link_tag and imagen_tag):
-            continue  # saltar si falta algo importante
+            continue  # omitir si faltan elementos
 
         nombre = nombre_tag.get_text(strip=True)
         precio = precio_tag.get_text(strip=True)
@@ -26,12 +26,16 @@ def buscar_alfaydelta(juego):
         imagen = imagen_tag.get("src") or imagen_tag.get("data-src")
         imagen = "https:" + imagen if imagen.startswith("//") else imagen
 
+        # Verificar disponibilidad real
+        agotado_tag = producto.select_one(".product-item__badge--sold")
+        disponible = not agotado_tag  # si hay etiqueta de agotado, no está disponible
+
         resultados.append({
             "nombre": nombre,
             "precio": precio,
             "url": url_producto,
             "imagen": imagen,
-            "disponible": True  # si tiene precio, lo consideramos disponible
+            "disponible": disponible
         })
 
     return resultados
