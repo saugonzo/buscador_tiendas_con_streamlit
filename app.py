@@ -71,15 +71,23 @@ if st.button("Buscar"):
             })
 
     for row in resultados:
-        cols = st.columns([1, 2, 2, 2, 2])
-        if row["Imagen"]:
-            cols[0].image(row["Imagen"], use_container_width=True)
-        else:
-            cols[0].write("Sin imagen")
-        cols[1].markdown(f"**{row['Tienda']}**")
-        cols[2].markdown(f"{row['Nombre']}")
-        cols[3].markdown(f"{row['Precio']} - {row['Disponible']}")
-        if row["Link"] and row["Link"] != "-":
-            cols[4].markdown(f"[Ir al producto]({row['Link']})", unsafe_allow_html=True)
-        else:
-            cols[4].write("-")
+    cols = st.columns([1, 2, 1, 1, 1])
+
+    if row["imagen"]:
+        cols[0].image(row["imagen"], use_container_width=True)
+    else:
+        cols[0].write("Sin imagen")
+
+    cols[1].markdown(f"**{row['nombre']}**")
+
+    disponible = row.get("disponible", False)
+    icono = "✅" if disponible else "❌"
+    precio = row.get("precio", "N/A")
+    cols[2].markdown(f"{precio} {icono}")
+
+    if row.get("url"):
+        cols[3].markdown(f"[Ir al producto]({row['url']})")
+    else:
+        cols[3].write("Sin enlace")
+
+    cols[4].markdown(f"*{row.get('tienda', '')}*")
