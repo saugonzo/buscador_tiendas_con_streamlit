@@ -1,41 +1,38 @@
 import requests
 from bs4 import BeautifulSoup
 
-def buscar_canteraludica(juego_buscado):
-    url_busqueda = f"https://canteraludica.com/search?q={juego_buscado.replace(' ', '+')}"
+def buscar_canteraludica(juego):
+    url = f"https://canteraludica.com/search?q={juego.replace(' ', '+')}&options%5Bprefix%5D=last"
     headers = {
         "User-Agent": "Mozilla/5.0"
     }
+    response = requests.get(url, headers=headers)
+    soup = BeautifulSoup(response.text, "html.parser")
 
-    try:
-        response = requests.get(url_busqueda, headers=headers, timeout=10)
-        response.raise_for_status()
-        soup = BeautifulSoup(response.text, "html.parser")
-        productos = soup.select("li.grid__item")
+    resultados = []
+    productos = soup.select("li.grid__item")
 
-        for producto in productos:
-            titulo_tag = producto.select_one("a.full-unstyled-link")
-            nombre = titulo_tag.get_text(strip=True) if titulo_tag else ""
-            if juego_buscado.lower() in nombre.lower():
-                # Verifica si está agotado
-                agotado = producto.find(string=lambda s: "agotado" in s.lower()) is not None
-                if agotado:
-                    continue
+    for producto in productos:
+        nombre_tag = producto.select_one(".card__heading a")
+        precio_tag = producto.select_one(".price__regular .price-item--regular")
+        imagen_tag = producto.select_one("img")
+        agotado_tag = producto.select_one(".card__badge span")
 
-                precio_tag = producto.select_one(".price__container .price-item--last")
-                precio = precio_tag.get_text(strip=True).replace("\xa0", " ") if precio_tag else "Precio no disponible"
-                link = "https://canteraludica.com" + titulo_tag["href"]
-                imagen_tag = producto.select_one("img")
-                imagen = "https:" + imagen_tag["src"] if imagen_tag and imagen_tag.get("src", "").startswith("//") else imagen_tag["src"]
+        nombre = nombre_tag.text.strip() if nombre_tag else "Sin nombre"
+        precio = precio_tag.text.strip() if precio_tag else "Sin precio"
+        url_producto = "https://canteraludica.com" + nombre_tag["href"] if nombre_tag else ""
+        imagen = "https:" + imagen_tag["src"] if imagen_tag else ""
 
-                return {
-                    "nombre": nombre,
-                    "precio": precio,
-                    "url": link,
-                    "imagen": imagen
-                }
+        disponible = True
+        if agotado_tag and "Agotado" in agotado_tag.text:
+            disponible = False
 
-    except Exception as e:
-        return {"error": str(e)}
+        resultados.append({
+            "nombre": nombre,
+            "precio": precio,
+            "url": url_producto,
+            "imagen": imagen,
+            "disponible": disponible
+        })
 
-    return None
+    return resultados
