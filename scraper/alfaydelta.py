@@ -8,17 +8,17 @@ def buscar_alfaydelta(juego):
     response.raise_for_status()
 
     soup = BeautifulSoup(response.text, "html.parser")
-    productos = soup.select(".productgrid--item")
+    productos = soup.select(".product-item")  # este selector sí existe en el HTML real
 
     resultados = []
     for producto in productos:
-        nombre_tag = producto.select_one(".productitem--title")
-        precio_tag = producto.select_one(".price.price--highlight")
-        imagen_tag = producto.select_one("img.productitem--image-primary")
-        link_tag = producto.select_one("a.full-unstyled-link")
+        nombre_tag = producto.select_one(".product-item__title")
+        precio_tag = producto.select_one(".product__price--original")
+        link_tag = producto.select_one("a")
+        imagen_tag = producto.select_one("img")
 
         if not (nombre_tag and precio_tag and link_tag and imagen_tag):
-            continue  # omitir si faltan elementos
+            continue
 
         nombre = nombre_tag.get_text(strip=True)
         precio = precio_tag.get_text(strip=True)
@@ -26,9 +26,9 @@ def buscar_alfaydelta(juego):
         imagen = imagen_tag.get("src") or imagen_tag.get("data-src")
         imagen = "https:" + imagen if imagen.startswith("//") else imagen
 
-        # Verificar disponibilidad real
-        agotado_tag = producto.select_one(".product-item__badge--sold")
-        disponible = not agotado_tag  # si hay etiqueta de agotado, no está disponible
+        # Revisar si el producto está agotado
+        agotado = producto.select_one(".product-item__badge--sold")
+        disponible = not agotado
 
         resultados.append({
             "nombre": nombre,
