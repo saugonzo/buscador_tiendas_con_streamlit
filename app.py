@@ -16,7 +16,7 @@ from scraper.lacasadelaeducadora import buscar_lacasadelaeducadora
 from scraper.juegodebelugas import buscar_juegodebelugas
 from scraper.infiniteskill import buscar_infiniteskill
 
-st.set_page_config(page_title="Buscador de Juegos de Mesa", layout="centered")
+st.set_page_config(page_title="Buscador de Juegos de Mesa", layout="wide")
 st.title("🔍 Buscador de Juegos de Mesa en Tiendas Mexicanas")
 
 juego = st.text_input("Escribe el nombre del juego:", "")
@@ -34,24 +34,52 @@ if st.button("Buscar"):
         ("Eurojuegos", buscar_eurojuegos),
         ("La Casa de la Educadora", buscar_lacasadelaeducadora),
         ("Juegos de Belugas", buscar_juegodebelugas),
-        ("Infinite Skill", buscar_infiniteskill)
+        ("Infinite Skill", buscar_infiniteskill),
     ]
 
+    resultados = []
     for nombre, funcion in tiendas:
-        st.subheader(f"Tienda: {nombre}")
         try:
-            resultados = funcion(juego)
-            disponibles = [r for r in resultados if r["disponible"]]
-            if not disponibles:
-                st.warning("❌ No disponible.")
+            juegos = funcion(juego)
+            if juegos:
+                for info in juegos:
+                    resultados.append({
+                        "Tienda": nombre,
+                        "Nombre": info.get("nombre", "Sin nombre"),
+                        "Precio": info.get("precio", "Sin precio"),
+                        "Link": info.get("url", "-"),
+                        "Imagen": info.get("imagen", None),
+                        "Disponible": "✅" if info.get("disponible", False) else "❌"
+                    })
             else:
-                for r in disponibles:
-                    cols = st.columns([1, 3, 3])
-                    if r["imagen"]:
-                        cols[0].image(r["imagen"], use_container_width=True)
-                    else:
-                        cols[0].write("Sin imagen")
-                    cols[1].markdown(f"**{r['nombre']}**")
-                    cols[2].markdown(f"[{r['precio']}]({r['url']})")
+                resultados.append({
+                    "Tienda": nombre,
+                    "Nombre": "Sin resultados",
+                    "Precio": "-",
+                    "Link": "-",
+                    "Imagen": None,
+                    "Disponible": "-"
+                })
         except Exception as e:
-            st.error(f"⚠️ Error en {nombre}: {e}")
+            resultados.append({
+                "Tienda": nombre,
+                "Nombre": f"Error: {str(e)}",
+                "Precio": "-",
+                "Link": "-",
+                "Imagen": None,
+                "Disponible": "-"
+            })
+
+    for row in resultados:
+        cols = st.columns([1, 2, 2, 2, 2])
+        if row["Imagen"]:
+            cols[0].image(row["Imagen"], use_container_width=True)
+        else:
+            cols[0].write("Sin imagen")
+        cols[1].markdown(f"**{row['Tienda']}**")
+        cols[2].markdown(f"{row['Nombre']}")
+        cols[3].markdown(f"{row['Precio']} - {row['Disponible']}")
+        if row["Link"] and row["Link"] != "-":
+            cols[4].markdown(f"[Ir al producto]({row['Link']})", unsafe_allow_html=True)
+        else:
+            cols[4].write("-")
